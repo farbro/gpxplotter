@@ -33,37 +33,39 @@ ref_y = args.refpoint[1]
 
 filename, ext = os.path.splitext(args.gpxfile)
 
-points = []
-
-if ext == '.gpx':
-    gpx_file = open(args.gpxfile, 'r')
-
-    # Parse gpx
-    gpx = gpxpy.parse(args.gpxfile)
-
-    #Get points list
-    for track in gpx.tracks:
-        for segment in track.segments:
-            for point in segment.points:
-                points.append((point.latitude, point.longitude, point.elevation))
-
-elif ext == '.sol':
-    points = np.loadtxt(args.gpxfile, comments='%', delimiter=',', usecols = (1, 2, 3))
-
-    print(points)
-
-else:
-    print('File format not supported')
 
 # Define projections
 
 wgs84 = pyproj.Proj(proj='latlong', ellps='WGS84', datum='WGS84')
 sweref99 = pyproj.Proj(init='epsg:3006')
 
-lat = points[:][0]
-lon = points[:][1]
-el  = points[:][2]
+if ext == '.gpx':
+    gpx_file = open(args.gpxfile, 'r')
 
+    # Parse gpx
+    gpx = gpxpy.parse(gpx_file)
+
+    #Get points list
+    points = []
+
+    for track in gpx.tracks:
+        for segment in track.segments:
+            for point in segment.points:
+                points.append((point.latitude, point.longitude))
+
+    points = np.asarray(points)
+
+elif ext == '.sol':
+    #Read sol file
+    points = np.loadtxt(args.gpxfile, comments='%', delimiter=',', usecols = (1, 2))
+
+else:
+    print('File format not supported')
+
+lat = points[:,0]
+lon = points[:,1]
+
+#Transform
 x, y = pyproj.transform(wgs84, sweref99, lon, lat)
 
 #Get mean
@@ -71,8 +73,8 @@ mean_x = np.mean(x)
 mean_y = np.mean(y)
 
 # Center around mean
-x = np.subtract(x, mean_x)
-y = np.subtract(y, mean_y)
+x = np.subtract(x, ref_x)
+y = np.subtract(y, ref_y)
 
 # Plot std dev ellipse
 nstd = 2
@@ -92,21 +94,20 @@ ax.add_artist(ell)
 plt.scatter(x, y, s=4)
 
 #Plot mean point
-plt.scatter(0, 0, marker='+', color='k', s=200) 
+plt.scatter(mean_x - ref_x, mean_y - ref_y, marker='+', color='k', s=200)
 
 #Plot true location
-plt.scatter(ref_x - mean_x, ref_y - mean_y, marker='x', color='r', s=200)
-
-
-if (args.output):
-    plt.savefig(args.output)
-else:
-    plt.show()
-
+plt.scatter(0, 0, marker='x', color='r', s=200) 
 
 #Print stats
 print("std dev x = " + str(np.std(x)))
 print("std dev y = " + str(np.std(y)))
 
 print("error = " + str(dist(mean_x, mean_y, ref_x, ref_y)))
+
+
+if (args.output):
+    plt.savefig(args.output)
+else:
+    plt.show()
 
