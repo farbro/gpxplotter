@@ -91,20 +91,27 @@ ell.set_facecolor('none')
 ax.add_artist(ell)
 
 # Plot GPX points
-plt.scatter(x, y, s=4)
+scatterplt = plt.scatter(x, y, s=4)
 
 #Plot mean point
-plt.scatter(mean_x - ref_x, mean_y - ref_y, marker='+', color='k', s=200)
+meanplt = plt.scatter(mean_x - ref_x, mean_y - ref_y, marker='+', color='k', s=100)
 
 #Plot true location
-plt.scatter(0, 0, marker='x', color='r', s=200) 
+trueplt = plt.scatter(0, 0, marker='x', color='r', s=100) 
+
+#Labels
+plt.xlabel("E (m)")
+plt.ylabel("N (m)")
+plt.legend((meanplt, trueplt), ('Avg. location', 'True location'))
 
 #Print stats
 print("std dev x = " + str(np.std(x)))
 print("std dev y = " + str(np.std(y)))
 
-print("error = " + str(dist(mean_x, mean_y, ref_x, ref_y)))
+mean_error = dist(mean_x, mean_y, ref_x, ref_y)
+print("error = " + str(mean_error))
 
+#plt.text(right, bottom, "Mean error: " + str(mean_error), horizontalalignment='right', verticalalignment='bottom', transform=ax.transAxes, bbox=dict(facecolor='white', alpha=0.5))
 
 if (args.output):
     plt.savefig(args.output)
