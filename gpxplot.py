@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
 import argparse
+import os
 
 parser = argparse.ArgumentParser(description='Scatter plots from gpx files.')
-parser.add_argument('gpxfile', metavar='I', help='path to gpx file')
+parser.add_argument('gpxfile', metavar='I', help='path to .gpx or .sol file')
 parser.add_argument('refpoint', metavar='XXXXXXX.XXX', type=float, nargs=2, help='reference point (SWEREF99)')
 parser.add_argument('--output', metavar='O', help='output file (none = show plot)')
 args = parser.parse_args()
@@ -29,30 +30,40 @@ def dist(x1, y1, x2, y2):
 
 ref_x = args.refpoint[0]
 ref_y = args.refpoint[1]
-gpx_file = open(args.gpxfile, 'r')
 
+filename, ext = os.path.splitext(args.gpxfile)
+
+points = []
+
+if ext == '.gpx':
+    gpx_file = open(args.gpxfile, 'r')
+
+    # Parse gpx
+    gpx = gpxpy.parse(args.gpxfile)
+
+    #Get points list
+    for track in gpx.tracks:
+        for segment in track.segments:
+            for point in segment.points:
+                points.append((point.latitude, point.longitude, point.elevation))
+
+elif ext == '.sol':
+    points = np.loadtxt(args.gpxfile, comments='%', delimiter=',', usecols = (1, 2, 3))
+
+    print(points)
+
+else:
+    print('File format not supported')
 
 # Define projections
 
 wgs84 = pyproj.Proj(proj='latlong', ellps='WGS84', datum='WGS84')
 sweref99 = pyproj.Proj(init='epsg:3006')
 
-# Parse gpx
-gpx = gpxpy.parse(gpx_file)
+lat = points[:][0]
+lon = points[:][1]
+el  = points[:][2]
 
-#Get points list
-points = []
-
-for track in gpx.tracks:
-    for segment in track.segments:
-        for point in segment.points:
-            points.append(point)
-
-lat = [p.latitude for p in points]
-lon = [p.longitude for p in points]
-el  = [p.elevation for p in points]
-
-#Transform to sweref
 x, y = pyproj.transform(wgs84, sweref99, lon, lat)
 
 #Get mean
